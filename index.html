@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bible Quotes Pyramid</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #f9f9f9;
+    }
+
+    .language-selector {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 2000;
+      transition: opacity 0.3s;
+    }
+
+    .language-selector.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .language-selector select {
+      padding: 5px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    .bar {
+      width: 100%;
+      margin: 10px auto;
+      background: #ddd;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.5s ease;
+      position: relative;
+    }
+
+    .bar.expanded {
+      padding-bottom: 20px;
+    }
+
+    .bar-title {
+      text-align: center;
+      padding: 10px;
+      font-weight: bold;
+      background: #bbb;
+    }
+
+    /* Color themes for bars */
+    .bar:nth-child(5n+1) .bar-title { background: #FF9AA2; }
+    .bar:nth-child(5n+2) .bar-title { background: #FFB7B2; }
+    .bar:nth-child(5n+3) .bar-title { background: #FFDAC1; }
+    .bar:nth-child(5n+4) .bar-title { background: #E2F0CB; }
+    .bar:nth-child(5n+5) .bar-title { background: #B5EAD7; }
+
+    .stickers-container {
+      width: 100%;
+      display: none;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      position: relative;
+      min-height: 130px;
+    }
+
+    .bar.expanded .stickers-container {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(255, 255, 255, 0.97);
+      z-index: 1000;
+      padding: 20px;
+      overflow: auto;
+    }
+
+    .sticker {
+      position: absolute;
+      display: inline-block;
+      min-width: 100px;
+      max-width: 300px;
+      border: 2px dashed #ccc;
+      border-radius: 4px;
+      padding: 10px;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
+      transform: rotate(var(--rotation));
+      cursor: move;
+      user-select: none;
+      white-space: normal;
+      overflow-wrap: break-word;
+      font-size: 14px;
+      transition: transform 0.2s;
+    }
+
+    .sticker:hover {
+      transform: rotate(0deg) scale(1.05);
+      z-index: 1001;
+    }
+
+    /* Color themes for stickers */
+    .sticker:nth-child(5n+1) { background: #FFF9C4; }
+    .sticker:nth-child(5n+2) { background: #E1F5FE; }
+    .sticker:nth-child(5n+3) { background: #F1F8E9; }
+    .sticker:nth-child(5n+4) { background: #FFEBEE; }
+    .sticker:nth-child(5n+5) { background: #F3E5F5; }
+
+    .sticker::before {
+      content: '';
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+    }
+
+    .trash-bin {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      background: #ff4444;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1002;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      transition: all 0.3s;
+    }
+
+    .trash-bin::before {
+      content: '🗑️';
+      font-size: 30px;
+    }
+
+    .trash-bin.active {
+      transform: scale(1.2);
+      background: #ff0000;
+    }
+
+    .input-form {
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .input-form label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    .input-form input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .input-form button {
+      padding: 10px 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px 5px 5px 0;
+    }
+
+    .input-form button:hover {
+      background: #45a049;
+    }
+
+    .input-form button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
+
+    .sticker-input {
+      margin-bottom: 10px;
+    }
+
+    .close-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      font-size: 30px;
+      cursor: pointer;
+      z-index: 1001;
+      background: white;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .search-container {
+      max-width: 600px;
+      margin: 20px auto;
+      display: flex;
+      gap: 10px;
+    }
+
+    .search-container input {
+      flex-grow: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .highlight {
+      background-color: yellow;
+    }
+
+    @media (max-width: 768px) {
+      .sticker {
+        min-width: 80px;
+        max-width: 250px;
+        font-size: 12px;
+      }
+      .input-form, .search-container {
+        margin: 10px;
+        padding: 10px;
+      }
+      .trash-bin {
+        width: 50px;
+        height: 50px;
+        bottom: 15px;
+        right: 15px;
+      }
+      .trash-bin::before {
+        font-size: 24px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .sticker {
+        min-width: 60px;
+        max-width: 200px;
+        font-size: 10px;
+      }
+      .language-selector {
+        top: 5px;
+        right: 5px;
+      }
+      .language-selector select {
+        padding: 3px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="language-selector">
+    <select id="language-select">
+      <option value="en">English</option>
+      <option value="uk">Українська</option>
+      <option value="cs">Čeština</option>
+      <option value="pl">Polski</option>
+      <option value="de">Deutsch</option>
+      <option value="es">Español</option>
+      <option value="sv">Svenska</option>
+    </select>
+  </div>
+
+  <h1 id="main-title" style="text-align:center">Bible Quotes Collection</h1>
+  
+  <div class="search-container">
+    <input type="text" id="search-input" placeholder="Search topics and quotes..." />
+    <button id="search-btn" onclick="searchTopics()">Search</button>
+    <button id="clear-search-btn" onclick="clearSearch()">Clear</button>
+  </div>
+  
+  <div class="input-form">
+    <label id="topic-label" for="topic-name">Topic name:</label>
+    <input type="text" id="topic-name" placeholder="Enter topic name" required />
+    <div id="stickers-inputs">
+      <!-- Dynamic fields for stickers -->
+    </div>
+    <button id="add-quote-btn" onclick="addStickerInput()">Add Bible quote</button>
+    <button id="add-topic-btn" onclick="addTopic()">Add Topic</button>
+    <button id="clear-form-btn" onclick="clearForm()">Clear Form</button>
+  </div>
+  
+  <div id="pyramid"></div>
+
+  <script>
+    // Translations
+    const translations = {
+      en: {
+        title: "Bible Quotes Collection",
+        searchPlaceholder: "Search topics and quotes...",
+        searchBtn: "Search",
+        clearSearchBtn: "Clear",
+        topicLabel: "Topic name:",
+        topicPlaceholder: "Enter topic name",
+        addQuoteBtn: "Add Bible quote",
+        addTopicBtn: "Add Topic",
+        clearFormBtn: "Clear Form",
+        noTopicAlert: "Please enter topic name.",
+        noQuotesAlert: "Please add at least one quote.",
+        deleteConfirm: "Delete this quote?",
+        noResults: "No matching topics or quotes found."
+      },
+      uk: {
+        title: "Колекція біблійних цитат",
+        searchPlaceholder: "Пошук тем та цитат...",
+        searchBtn: "Пошук",
+        clearSearchBtn: "Очистити",
+        topicLabel: "Назва теми:",
+        topicPlaceholder: "Введіть назву теми",
+        addQuoteBtn: "Додати цитату з Біблії",
+        addTopicBtn: "Додати тему",
+        clearFormBtn: "Очистити форму",
+        noTopicAlert: "Будь ласка, введіть назву теми.",
+        noQuotesAlert: "Будь ласка, додайте хоча б одну цитату.",
+        deleteConfirm: "Видалити цю цитату?",
+        noResults: "Не знайдено відповідних тем або цитат."
+      },
+      cs: {
+        title: "Sbírka biblických citátů",
+        searchPlaceholder: "Hledat témata a citáty...",
+        searchBtn: "Hledat",
+        clearSearchBtn: "Vymazat",
+        topicLabel: "Název tématu:",
+        topicPlaceholder: "Zadejte název tématu",
+        addQuoteBtn: "Přidat biblický citát",
+        addTopicBtn: "Přidat téma",
+        clearFormBtn: "Vyčistit formulář",
+        noTopicAlert: "Prosím zadejte název tématu.",
+        noQuotesAlert: "Prosím přidejte alespoň jeden citát.",
+        deleteConfirm: "Smazat tento citát?",
+        noResults: "Nebyly nalezeny odpovídající témata nebo citáty."
+      },
+      pl: {
+        title: "Kolekcja cytatów biblijnych",
+        searchPlaceholder: "Szukaj tematów i cytatów...",
+        searchBtn: "Szukaj",
+        clearSearchBtn: "Wyczyść",
+        topicLabel: "Nazwa tematu:",
+        topicPlaceholder: "Wprowadź nazwę tematu",
+        addQuoteBtn: "Dodaj cytat biblijny",
+        addTopicBtn: "Dodaj temat",
+        clearFormBtn: "Wyczyść formularz",
+        noTopicAlert: "Proszę wprowadzić nazwę tematu.",
+        noQuotesAlert: "Proszę dodać przynajmniej jeden cytat.",
+        deleteConfirm: "Usunąć ten cytat?",
+        noResults: "Nie znaleziono pasujących tematów lub cytatów."
+      },
+      de: {
+        title: "Bibelzitate Sammlung",
+        searchPlaceholder: "Themen und Zitate suchen...",
+        searchBtn: "Suchen",
+        clearSearchBtn: "Löschen",
+        topicLabel: "Themenname:",
+        topicPlaceholder: "Themenname eingeben",
+        addQuoteBtn: "Bibelzitat hinzufügen",
+        addTopicBtn: "Thema hinzufügen",
+        clearFormBtn: "Formular leeren",
+        noTopicAlert: "Bitte geben Sie einen Themenname ein.",
+        noQuotesAlert: "Bitte fügen Sie mindestens ein Zitat hinzu.",
+        deleteConfirm: "Dieses Zitat löschen?",
+        noResults: "Keine passenden Themen oder Zitate gefunden."
+      },
+      es: {
+        title: "Colección de citas bíblicas",
+        searchPlaceholder: "Buscar temas y citas...",
+        searchBtn: "Buscar",
+        clearSearchBtn: "Limpiar",
+        topicLabel: "Nombre del tema:",
+        topicPlaceholder: "Ingrese el nombre del tema",
+        addQuoteBtn: "Agregar cita bíblica",
+        addTopicBtn: "Agregar tema",
+        clearFormBtn: "Limpiar formulario",
+        noTopicAlert: "Por favor ingrese el nombre del tema.",
+        noQuotesAlert: "Por favor agregue al menos una cita.",
+        deleteConfirm: "¿Eliminar esta cita?",
+        noResults: "No se encontraron temas o citas coincidentes."
+      },
+      sv: {
+        title: "Bibelcitat Samling",
+        searchPlaceholder: "Sök ämnen och citat...",
+        searchBtn: "Sök",
+        clearSearchBtn: "Rensa",
+        topicLabel: "Ämnesnamn:",
+        topicPlaceholder: "Ange ämnesnamn",
+        addQuoteBtn: "Lägg till bibelcitat",
+        addTopicBtn: "Lägg till ämne",
+        clearFormBtn: "Rensa formulär",
+        noTopicAlert: "Vänligen ange ett ämnesnamn.",
+        noQuotesAlert: "Vänligen lägg till minst ett citat.",
+        deleteConfirm: "Ta bort detta citat?",
+        noResults: "Inga matchande ämnen eller citat hittades."
+      }
+    };
+
+    // Current language
+    let currentLanguage = 'en';
+    const languageSelect = document.getElementById('language-select');
+    const languageSelector = document.querySelector('.language-selector');
+
+    // Function to check if any topic is expanded
+    function isAnyTopicExpanded() {
+      return document.querySelector('.bar[data-expanded="true"]') !== null;
+    }
+
+    // Function to update language selector visibility
+    function updateLanguageSelectorVisibility() {
+      if (isAnyTopicExpanded()) {
+        languageSelector.classList.add('hidden');
+      } else {
+        languageSelector.classList.remove('hidden');
+      }
+    }
+
+    // Initialize with saved language or browser language
+    document.addEventListener('DOMContentLoaded', function() {
+      const savedLanguage = localStorage.getItem('bibleAppLanguage');
+      const browserLanguage = navigator.language.substring(0, 2);
+      
+      if (savedLanguage) {
+        currentLanguage = savedLanguage;
+      } else if (translations[browserLanguage]) {
+        currentLanguage = browserLanguage;
+      }
+      
+      languageSelect.value = currentLanguage;
+      updateLanguage();
+      addStickerInput();
+      loadTopics();
+      
+      // Add observer for topic expansion changes
+      const observer = new MutationObserver(function(mutations) {
+        updateLanguageSelectorVisibility();
+      });
+      
+      observer.observe(document.getElementById('pyramid'), {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ['data-expanded']
+      });
+    });
+
+    // Language change handler
+    languageSelect.addEventListener('change', function() {
+      currentLanguage = this.value;
+      localStorage.setItem('bibleAppLanguage', currentLanguage);
+      updateLanguage();
+    });
+
+    // Update all text elements to current language
+    function updateLanguage() {
+      const t = translations[currentLanguage];
+      document.getElementById('main-title').textContent = t.title;
+      document.getElementById('search-input').placeholder = t.searchPlaceholder;
+      document.getElementById('search-btn').textContent = t.searchBtn;
+      document.getElementById('clear-search-btn').textContent = t.clearSearchBtn;
+      document.getElementById('topic-label').textContent = t.topicLabel;
+      document.getElementById('topic-name').placeholder = t.topicPlaceholder;
+      document.getElementById('add-quote-btn').textContent = t.addQuoteBtn;
+      document.getElementById('add-topic-btn').textContent = t.addTopicBtn;
+      document.getElementById('clear-form-btn').textContent = t.clearFormBtn;
+      
+      // Update existing sticker input labels
+      document.querySelectorAll('.sticker-input label').forEach((label, index) => {
+        label.textContent = `${t.addQuoteBtn} ${index + 1}:`;
+      });
+    }
+
+    const pyramid = document.getElementById('pyramid');
+    const stickersInputsContainer = document.getElementById('stickers-inputs');
+
+    function addStickerInput() {
+      const stickerInputDiv = document.createElement('div');
+      stickerInputDiv.className = 'sticker-input';
+
+      const t = translations[currentLanguage];
+      const label = document.createElement('label');
+      label.textContent = `${t.addQuoteBtn} ${stickersInputsContainer.children.length + 1}:`;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = t.addQuoteBtn;
+      input.className = 'sticker-input-field';
+
+      stickerInputDiv.appendChild(label);
+      stickerInputDiv.appendChild(input);
+      stickersInputsContainer.appendChild(stickerInputDiv);
+    }
+
+    function addTopic() {
+      const topicNameInput = document.getElementById('topic-name');
+      const topicName = topicNameInput.value.trim();
+
+      const t = translations[currentLanguage];
+      
+      if (!topicName) {
+        alert(t.noTopicAlert);
+        return;
+      }
+
+      // Collect all quotes
+      const stickerInputs = stickersInputsContainer.querySelectorAll('.sticker-input-field');
+      const stickers = Array.from(stickerInputs)
+        .map(input => input.value.trim())
+        .filter(value => value);
+
+      if (stickers.length === 0) {
+        alert(t.noQuotesAlert);
+        return;
+      }
+
+      // Create bar
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.dataset.expanded = 'false';
+
+      const title = document.createElement('div');
+      title.className = 'bar-title';
+      title.textContent = `${topicName} (${stickers.length})`;
+      bar.appendChild(title);
+
+      const stickersContainer = document.createElement('div');
+      stickersContainer.className = 'stickers-container';
+      bar.appendChild(stickersContainer);
+
+      title.addEventListener('click', () => {
+        const isExpanded = bar.dataset.expanded === 'true';
+        if (!isExpanded) {
+          bar.classList.add('expanded');
+          if (!stickersContainer.hasChildNodes()) {
+            createStickers(stickersContainer, stickers);
+            requestAnimationFrame(() => layoutStickers(stickersContainer));
+          }
+        } else {
+          bar.classList.remove('expanded');
+          stickersContainer.innerHTML = '';
+        }
+        bar.dataset.expanded = (!isExpanded).toString();
+      });
+
+      pyramid.appendChild(bar);
+      saveTopics();
+
+      // Clear form but don't disable
+      clearForm();
+    }
+
+    function createStickers(container, stickers) {
+      // Add close button
+      const closeBtn = document.createElement('div');
+      closeBtn.className = 'close-btn';
+      closeBtn.textContent = '×';
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const bar = container.closest('.bar');
+        if (bar) {
+          bar.classList.remove('expanded');
+          bar.dataset.expanded = 'false';
+          container.innerHTML = '';
+        }
+      });
+      container.appendChild(closeBtn);
+
+      // Create trash bin
+      const trashBin = document.createElement('div');
+      trashBin.className = 'trash-bin';
+      container.appendChild(trashBin);
+
+      // Create stickers
+      stickers.forEach((quote, i) => {
+        const sticker = document.createElement('div');
+        sticker.className = 'sticker';
+        sticker.textContent = quote;
+        sticker.style.setProperty('--rotation', `${(Math.random() * 10 - 5)}deg`);
+        container.appendChild(sticker);
+        
+        // Make draggable and add trash bin functionality
+        requestAnimationFrame(() => {
+          if (document.body.contains(sticker)) {
+            makeDraggable(sticker, trashBin);
+          }
+        });
+      });
+    }
+
+    function makeDraggable(el, trashBin) {
+      if (!el) return;
+
+      let isDragging = false;
+      let shiftX, shiftY;
+      let isOverTrash = false;
+
+      function onMouseDown(e) {
+        if (e.target.classList.contains('close-btn')) return;
+        
+        const rect = el.getBoundingClientRect();
+        if (!rect) return;
+        shiftX = e.clientX - rect.left;
+        shiftY = e.clientY - rect.top;
+        isDragging = true;
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp, { once: true });
+      }
+
+      function onMouseMove(e) {
+        if (!isDragging) return;
+
+        const container = el.parentElement;
+        if (!container || !document.body.contains(container)) {
+          stopDragging();
+          return;
+        }
+
+        // Check if over trash bin
+        const trashRect = trashBin.getBoundingClientRect();
+        const elRect = {
+          left: e.clientX - shiftX,
+          top: e.clientY - shiftY,
+          right: e.clientX - shiftX + el.offsetWidth,
+          bottom: e.clientY - shiftY + el.offsetHeight
+        };
+
+        const isOver = !(
+          elRect.right < trashRect.left || 
+          elRect.left > trashRect.right || 
+          elRect.bottom < trashRect.top || 
+          elRect.top > trashRect.bottom
+        );
+
+        if (isOver && !isOverTrash) {
+          trashBin.classList.add('active');
+          isOverTrash = true;
+        } else if (!isOver && isOverTrash) {
+          trashBin.classList.remove('active');
+          isOverTrash = false;
+        }
+
+        const bounds = container.getBoundingClientRect();
+        const x = Math.min(Math.max(0, e.pageX - bounds.left - shiftX), bounds.width - el.offsetWidth);
+        const y = Math.min(Math.max(0, e.pageY - bounds.top - shiftY), bounds.height - el.offsetHeight);
+
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+      }
+
+      function onMouseUp() {
+        if (isOverTrash) {
+          const t = translations[currentLanguage];
+          if (confirm(t.deleteConfirm)) {
+            el.remove();
+            const bar = el.closest('.bar');
+            if (bar) {
+              const title = bar.querySelector('.bar-title');
+              if (title) {
+                const match = title.textContent.match(/\((\d+)\)$/);
+                if (match) {
+                  const count = parseInt(match[1]) - 1;
+                  title.textContent = title.textContent.replace(/\(\d+\)$/, `(${count})`);
+                }
+              }
+            }
+            saveTopics();
+          }
+          trashBin.classList.remove('active');
+        }
+        stopDragging();
+      }
+
+      function stopDragging() {
+        if (!isDragging) return;
+        isDragging = false;
+        isOverTrash = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+
+      el.addEventListener('mousedown', onMouseDown);
+      el.ondragstart = () => false;
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') {
+          stopDragging();
+        }
+      });
+    }
+
+    function layoutStickers(container) {
+      if (document.visibilityState !== 'visible') return;
+
+      const stickers = container.querySelectorAll('.sticker:not(.close-btn):not(.trash-bin)');
+      const width = container.offsetWidth;
+      const cols = Math.max(1, Math.floor(width / 320));
+
+      stickers.forEach((sticker, index) => {
+        const row = Math.floor(index / cols);
+        const col = index % cols;
+        let offsetX = 0;
+        if (col === 0) offsetX = Math.random() * 75;
+        else if (col === cols - 1) offsetX = -Math.random() * 75;
+        else offsetX = (Math.random() - 0.5) * 75;
+
+        const stickerWidth = sticker.offsetWidth;
+        const x = col * (stickerWidth + 20) + offsetX;
+        const y = row * 120 + 40; // +40 to account for close button
+
+        sticker.style.left = `${x}px`;
+        sticker.style.top = `${y}px`;
+      });
+
+      const rows = Math.ceil(stickers.length / cols);
+      container.style.minHeight = `${rows * 130 + 40}px`;
+    }
+
+    // Save and load topics from localStorage
+    function saveTopics() {
+      const topics = [];
+      document.querySelectorAll('.bar').forEach(bar => {
+        const title = bar.querySelector('.bar-title').textContent;
+        const stickerCount = parseInt(title.match(/\((\d+)\)/)?.[1]) || 0;
+        const topicName = title.replace(/\s*\(\d+\)$/, '');
+        
+        // Get quotes from DOM or from initial creation
+        let quotes = [];
+        const stickers = bar.querySelectorAll('.sticker');
+        if (stickers.length > 0) {
+          quotes = Array.from(stickers).map(s => s.textContent);
+        } else {
+          // For topics that haven't been expanded yet
+          quotes = Array(stickerCount).fill('Quote not loaded yet');
+        }
+        
+        topics.push({
+          title: topicName,
+          stickers: quotes
+        });
+      });
+      localStorage.setItem('bibleTopics', JSON.stringify(topics));
+    }
+
+    function loadTopics() {
+      const saved = localStorage.getItem('bibleTopics');
+      if (saved) {
+        try {
+          JSON.parse(saved).forEach(topic => {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            bar.dataset.expanded = 'false';
+
+            const title = document.createElement('div');
+            title.className = 'bar-title';
+            title.textContent = `${topic.title} (${topic.stickers.length})`;
+            bar.appendChild(title);
+
+            const stickersContainer = document.createElement('div');
+            stickersContainer.className = 'stickers-container';
+            bar.appendChild(stickersContainer);
+
+            title.addEventListener('click', () => {
+              const isExpanded = bar.dataset.expanded === 'true';
+              if (!isExpanded) {
+                bar.classList.add('expanded');
+                if (!stickersContainer.hasChildNodes()) {
+                  createStickers(stickersContainer, topic.stickers);
+                  requestAnimationFrame(() => layoutStickers(stickersContainer));
+                }
+              } else {
+                bar.classList.remove('expanded');
+                stickersContainer.innerHTML = '';
+              }
+              bar.dataset.expanded = (!isExpanded).toString();
+            });
+
+            pyramid.appendChild(bar);
+          });
+        } catch (e) {
+          console.error('Failed to load saved topics:', e);
+        }
+      }
+    }
+
+    // Search functionality
+    function searchTopics() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      if (!query) return;
+      
+      const t = translations[currentLanguage];
+      
+      // Remove previous highlights
+      document.querySelectorAll('.highlight').forEach(el => {
+        el.classList.remove('highlight');
+      });
+      
+      let found = false;
+      
+      document.querySelectorAll('.bar').forEach(bar => {
+        const title = bar.querySelector('.bar-title');
+        const titleText = title.textContent.toLowerCase();
+        const stickers = bar.querySelectorAll('.sticker');
+        
+        let hasMatch = false;
+        
+        // Check title
+        if (titleText.includes(query)) {
+          title.classList.add('highlight');
+          hasMatch = true;
+        }
+        
+        // Check stickers (only if expanded)
+        if (bar.dataset.expanded === 'true') {
+          stickers.forEach(sticker => {
+            const stickerText = sticker.textContent.toLowerCase();
+            if (stickerText.includes(query)) {
+              sticker.classList.add('highlight');
+              hasMatch = true;
+            }
+          });
+        }
+        
+        if (hasMatch) {
+          bar.style.display = 'block';
+          found = true;
+          
+          // Expand if not already
+          if (bar.dataset.expanded === 'false') {
+            bar.dataset.expanded = 'true';
+            bar.classList.add('expanded');
+            const stickersContainer = bar.querySelector('.stickers-container');
+            stickersContainer.innerHTML = '';
+            
+            // Need to get the actual quotes - this is simplified
+            const topicTitle = title.textContent.replace(/\s*\(\d+\)$/, '');
+            const savedTopics = JSON.parse(localStorage.getItem('bibleTopics') || '[]');
+            const topic = savedTopics.find(t => t.title === topicTitle);
+            
+            if (topic) {
+              createStickers(stickersContainer, topic.stickers);
+              layoutStickers(stickersContainer);
+              
+              // Highlight matching stickers after they're created
+              setTimeout(() => {
+                stickersContainer.querySelectorAll('.sticker').forEach(sticker => {
+                  if (sticker.textContent.toLowerCase().includes(query)) {
+                    sticker.classList.add('highlight');
+                  }
+                });
+              }, 100);
+            }
+          }
+        } else {
+          bar.style.display = 'none';
+        }
+      });
+      
+      if (!found) {
+        alert(t.noResults);
+      }
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      document.querySelectorAll('.bar').forEach(bar => {
+        bar.style.display = 'block';
+      });
+      document.querySelectorAll('.highlight').forEach(el => {
+        el.classList.remove('highlight');
+      });
+    }
+
+    function clearForm() {
+      document.getElementById('topic-name').value = '';
+      stickersInputsContainer.innerHTML = '';
+      addStickerInput(); // Add one empty input
+    }
+
+    // Handle window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        document.querySelectorAll('.bar[data-expanded="true"] .stickers-container')
+          .forEach(container => layoutStickers(container));
+      }, 100);
+    });
+  </script>
+</body>
+</html>
