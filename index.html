@@ -603,106 +603,141 @@
     }
 
     function makeDraggable(el, trashBin) {
-      if (!el) return;
+      
+     if (!el) return;
 
-      let isDragging = false;
-      let shiftX, shiftY;
-      let isOverTrash = false;
+       let isDragging = false;
+       let shiftX, shiftY;
+       let isOverTrash = false;
 
-      function onMouseDown(e) {
-        if (e.target.classList.contains('close-btn')) return;
-        
-        const rect = el.getBoundingClientRect();
-        if (!rect) return;
-        shiftX = e.clientX - rect.left;
-        shiftY = e.clientY - rect.top;
-        isDragging = true;
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp, { once: true });
+     function onStart(e) {
+      if (e.target.classList.contains('close-btn')) return;
+      
+      // Prevent default for touch events to avoid scrolling
+      if (e.type === 'touchstart') {
+        e.preventDefault();
       }
+    
+    // Get coordinates from either mouse or touch event
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    const rect = el.getBoundingClientRect();
+    if (!rect) return;
+    
+    shiftX = clientX - rect.left;
+    shiftY = clientY - rect.top;
+    isDragging = true;
 
-      function onMouseMove(e) {
-        if (!isDragging) return;
+    if (e.type === 'mousedown') {
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onEnd, { once: true });
+    } else if (e.type === 'touchstart') {
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onEnd, { once: true });
+      document.addEventListener('touchcancel', onEnd, { once: true });
+    }
+  }
 
-        const container = el.parentElement;
-        if (!container || !document.body.contains(container)) {
-          stopDragging();
-          return;
-        }
+  function onMove(e) {
+    if (!isDragging) return;
+    
+    // Prevent default for touch events to avoid scrolling while dragging
+    if (e.type === 'touchmove') {
+      e.preventDefault();
+    }
+    
+    // Get coordinates from either mouse or touch event
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    const pageX = e.pageX || (e.touches && e.touches[0].pageX);
+    const pageY = e.pageY || (e.touches && e.touches[0].pageY);
 
-        // Check if over trash bin
-        const trashRect = trashBin.getBoundingClientRect();
-        const elRect = {
-          left: e.clientX - shiftX,
-          top: e.clientY - shiftY,
-          right: e.clientX - shiftX + el.offsetWidth,
-          bottom: e.clientY - shiftY + el.offsetHeight
-        };
+    const container = el.parentElement;
+    if (!container || !document.body.contains(container)) {
+      stopDragging();
+      return;
+    }
 
-        const isOver = !(
-          elRect.right < trashRect.left || 
-          elRect.left > trashRect.right || 
-          elRect.bottom < trashRect.top || 
-          elRect.top > trashRect.bottom
-        );
+    // Check if over trash bin
+    const trashRect = trashBin.getBoundingClientRect();
+    const elRect = {
+      left: clientX - shiftX,
+      top: clientY - shiftY,
+      right: clientX - shiftX + el.offsetWidth,
+      bottom: clientY - shiftY + el.offsetHeight
+    };
 
-        if (isOver && !isOverTrash) {
-          trashBin.classList.add('active');
-          isOverTrash = true;
-        } else if (!isOver && isOverTrash) {
-          trashBin.classList.remove('active');
-          isOverTrash = false;
-        }
+    const isOver = !(
+      elRect.right < trashRect.left || 
+      elRect.left > trashRect.right || 
+      elRect.bottom < trashRect.top || 
+      elRect.top > trashRect.bottom
+    );
 
-        const bounds = container.getBoundingClientRect();
-        const x = Math.min(Math.max(0, e.pageX - bounds.left - shiftX), bounds.width - el.offsetWidth);
-        const y = Math.min(Math.max(0, e.pageY - bounds.top - shiftY), bounds.height - el.offsetHeight);
+    if (isOver && !isOverTrash) {
+      trashBin.classList.add('active');
+      isOverTrash = true;
+    } else if (!isOver && isOverTrash) {
+      trashBin.classList.remove('active');
+      isOverTrash = false;
+    }
 
-        el.style.left = `${x}px`;
-        el.style.top = `${y}px`;
-      }
+    const bounds = container.getBoundingClientRect();
+    const x = Math.min(Math.max(0, pageX - bounds.left - shiftX), bounds.width - el.offsetWidth);
+    const y = Math.min(Math.max(0, pageY - bounds.top - shiftY), bounds.height - el.offsetHeight);
 
-      function onMouseUp() {
-        if (isOverTrash) {
-          const t = translations[currentLanguage];
-          if (confirm(t.deleteConfirm)) {
-            el.remove();
-            const bar = el.closest('.bar');
-            if (bar) {
-              const title = bar.querySelector('.bar-title');
-              if (title) {
-                const match = title.textContent.match(/\((\d+)\)$/);
-                if (match) {
-                  const count = parseInt(match[1]) - 1;
-                  title.textContent = title.textContent.replace(/\(\d+\)$/, `(${count})`);
-                }
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    }
+
+    function onEnd() {
+      if (isOverTrash) {
+        const t = translations[currentLanguage];
+        if (confirm(t.deleteConfirm)) {
+          el.remove();
+          const bar = el.closest('.bar');
+          if (bar) {
+            const title = bar.querySelector('.bar-title');
+            if (title) {
+              const match = title.textContent.match(/\((\d+)\)$/);
+              if (match) {
+                const count = parseInt(match[1]) - 1;
+                title.textContent = title.textContent.replace(/\(\d+\)$/, `(${count})`);
               }
             }
-            saveTopics();
           }
-          trashBin.classList.remove('active');
+          saveTopics();
         }
+        trashBin.classList.remove('active');
+      }
+      stopDragging();
+    }
+
+    function stopDragging() {
+      if (!isDragging) return;
+      isDragging = false;
+      isOverTrash = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onEnd);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      document.removeEventListener('touchcancel', onEnd);
+    }
+
+    // Add both mouse and touch event listeners
+    el.addEventListener('mousedown', onStart);
+    el.addEventListener('touchstart', onStart, { passive: false });
+    el.ondragstart = () => false;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') {
         stopDragging();
       }
+    });
 
-      function stopDragging() {
-        if (!isDragging) return;
-        isDragging = false;
-        isOverTrash = false;
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-      }
-
-      el.addEventListener('mousedown', onMouseDown);
-      el.ondragstart = () => false;
-
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'visible') {
-          stopDragging();
-        }
-      });
-    }
+      
+  }
 
     function layoutStickers(container) {
       if (document.visibilityState !== 'visible') return;
