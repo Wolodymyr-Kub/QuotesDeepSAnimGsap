@@ -87,7 +87,7 @@
       position: absolute;
       display: inline-block;
       min-width: 100px;
-      max-width: 300px;
+      max-width: 400px;
       border: 2px dashed #ccc;
       border-radius: 4px;
       padding: 10px;
@@ -97,7 +97,7 @@
       user-select: none;
       white-space: normal;
       overflow-wrap: break-word;
-      font-size: 14px;
+      font-size: 30px;
       transition: transform 0.2s;
     }
 
@@ -603,21 +603,33 @@
     }
 
     function makeDraggable(el, trashBin) {
-      
-     if (!el) return;
+  if (!el) return;
 
-       let isDragging = false;
-       let shiftX, shiftY;
-       let isOverTrash = false;
+  let isDragging = false;
+  let shiftX, shiftY;
+  let isOverTrash = false;
+  let touchStarted = false;
 
-     function onStart(e) {
-      if (e.target.classList.contains('close-btn')) return;
-      
-      // Prevent default for touch events to avoid scrolling
-      if (e.type === 'touchstart') {
-        e.preventDefault();
-      }
+  function onStart(e) {
+    if (e.target.classList.contains('close-btn')) return;
     
+    // For touch devices, maintain the hover effect briefly
+    if (e.type === 'touchstart') {
+      touchStarted = true;
+      
+      // Add a small delay before starting drag to allow hover effect to show
+      setTimeout(() => {
+        if (touchStarted) {
+          startDragging(e);
+        }
+      }, 200); // Match your CSS transition time
+    } else {
+      // For mouse, start dragging immediately
+      startDragging(e);
+    }
+  }
+
+  function startDragging(e) {
     // Get coordinates from either mouse or touch event
     const clientX = e.clientX || (e.touches && e.touches[0].clientX);
     const clientY = e.clientY || (e.touches && e.touches[0].clientY);
@@ -629,10 +641,10 @@
     shiftY = clientY - rect.top;
     isDragging = true;
 
-    if (e.type === 'mousedown') {
+    if (e.type === 'mousedown' || e.type === undefined) {
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onEnd, { once: true });
-    } else if (e.type === 'touchstart') {
+    } else if (e.type === 'touchstart' || touchStarted) {
       document.addEventListener('touchmove', onMove, { passive: false });
       document.addEventListener('touchend', onEnd, { once: true });
       document.addEventListener('touchcancel', onEnd, { once: true });
@@ -658,6 +670,10 @@
       stopDragging();
       return;
     }
+
+    // Once we're actually moving, override the hover effect with explicit positioning
+    el.style.transform = 'rotate(0deg) scale(1.05)';
+    el.style.zIndex = '1001';
 
     // Check if over trash bin
     const trashRect = trashBin.getBoundingClientRect();
@@ -689,55 +705,67 @@
 
     el.style.left = `${x}px`;
     el.style.top = `${y}px`;
-    }
+  }
 
-    function onEnd() {
-      if (isOverTrash) {
-        const t = translations[currentLanguage];
-        if (confirm(t.deleteConfirm)) {
-          el.remove();
-          const bar = el.closest('.bar');
-          if (bar) {
-            const title = bar.querySelector('.bar-title');
-            if (title) {
-              const match = title.textContent.match(/\((\d+)\)$/);
-              if (match) {
-                const count = parseInt(match[1]) - 1;
-                title.textContent = title.textContent.replace(/\(\d+\)$/, `(${count})`);
-              }
+  function onEnd() {
+    if (isOverTrash) {
+      const t = translations[currentLanguage];
+      if (confirm(t.deleteConfirm)) {
+        el.remove();
+        const bar = el.closest('.bar');
+        if (bar) {
+          const title = bar.querySelector('.bar-title');
+          if (title) {
+            const match = title.textContent.match(/\((\d+)\)$/);
+            if (match) {
+              const count = parseInt(match[1]) - 1;
+              title.textContent = title.textContent.replace(/\(\d+\)$/, `(${count})`);
             }
           }
-          saveTopics();
         }
-        trashBin.classList.remove('active');
+        saveTopics();
       }
-      stopDragging();
+      trashBin.classList.remove('active');
     }
-
-    function stopDragging() {
-      if (!isDragging) return;
-      isDragging = false;
-      isOverTrash = false;
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onEnd);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
-      document.removeEventListener('touchcancel', onEnd);
+    
+    // Reset transform to let CSS handle it again
+    if (isDragging) {
+      el.style.transform = '';
+      el.style.zIndex = '';
     }
-
-    // Add both mouse and touch event listeners
-    el.addEventListener('mousedown', onStart);
-    el.addEventListener('touchstart', onStart, { passive: false });
-    el.ondragstart = () => false;
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible') {
-        stopDragging();
-      }
-    });
-
-      
+    
+    touchStarted = false;
+    stopDragging();
   }
+
+  function onTouchCancel() {
+    touchStarted = false;
+    stopDragging();
+  }
+
+  function stopDragging() {
+    if (!isDragging) return;
+    isDragging = false;
+    isOverTrash = false;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onEnd);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onEnd);
+    document.removeEventListener('touchcancel', onTouchCancel);
+  }
+
+  // Add both mouse and touch event listeners
+  el.addEventListener('mousedown', onStart);
+  el.addEventListener('touchstart', onStart);
+  el.addEventListener('touchcancel', onTouchCancel);
+  el.ondragstart = () => false;
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') {
+      stopDragging();
+    }   
+  });
+}
 
     function layoutStickers(container) {
       if (document.visibilityState !== 'visible') return;
