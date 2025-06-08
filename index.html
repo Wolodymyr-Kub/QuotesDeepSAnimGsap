@@ -230,7 +230,44 @@
     .highlight {
       background-color: yellow;
     }
-
+    .add-quote-to-topic-form {
+  max-width: 600px;
+  margin: 20px auto 0 auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.add-quote-to-topic-form label {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+.add-quote-to-topic-form input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+.add-quote-to-topic-form button {
+  padding: 10px 20px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s;
+  align-self: flex-start;
+}
+.add-quote-to-topic-form button:hover {
+  background: #45a049;
+}
     @media (max-width: 768px) {
       .sticker {
         min-width: 80px;
@@ -601,30 +638,60 @@
           });
         });
 
-        // --- Add New Quote UI ---
-        const addQuoteDiv = document.createElement('div');
-        addQuoteDiv.style.marginTop = "20px";
-        addQuoteDiv.style.display = "flex";
-        addQuoteDiv.style.alignItems = "center";
-        addQuoteDiv.style.gap = "10px";
+          // --- Add New Quote UI (Styled) ---
+          const t = translations[currentLanguage];
 
-        const addQuoteInput = document.createElement('input');
-        addQuoteInput.type = "text";
-        addQuoteInput.placeholder = translations[currentLanguage].addQuoteBtn;
-        addQuoteInput.style.flex = "1";
+          const addQuoteForm = document.createElement('form');
+          addQuoteForm.className = 'add-quote-to-topic-form';
+          addQuoteForm.onsubmit = (e) => { e.preventDefault(); return false; };
 
-        const addQuoteBtn = document.createElement('button');
-        addQuoteBtn.textContent = translations[currentLanguage].addQuoteBtn;
-        addQuoteBtn.style.flex = "0";
+          // Label
+          const label = document.createElement('label');
+          label.textContent = t.addQuoteBtn + ':';
+          addQuoteForm.appendChild(label);
 
-        addQuoteDiv.appendChild(addQuoteInput);
-        addQuoteDiv.appendChild(addQuoteBtn);
+          // Input
+          const input = document.createElement('input');
+          input.type = "text";
+          input.placeholder = t.addQuoteBtn;
+          addQuoteForm.appendChild(input);
 
-        container.appendChild(addQuoteDiv);
+          // Button
+          const button = document.createElement('button');
+          button.type = "submit";
+          button.textContent = t.addQuoteBtn;
+          addQuoteForm.appendChild(button);
 
-        addQuoteBtn.addEventListener('click', function () {
-          const newQuote = addQuoteInput.value.trim();
-          if (!newQuote) return;
+          // Add handler
+          addQuoteForm.addEventListener('submit', function (evt) {
+            evt.preventDefault();
+            const newQuote = input.value.trim();
+            if (!newQuote) return;
+
+            // Add new sticker
+            const sticker = document.createElement('div');
+            sticker.className = 'sticker';
+            sticker.textContent = newQuote;
+            sticker.style.setProperty('--rotation', `${(Math.random() * 10 - 5)}deg`);
+            container.appendChild(sticker);
+            makeDraggable(sticker, trashBin);
+
+            layoutStickers(container);
+
+            // Update topic title count
+            const bar = container.closest('.bar');
+            if (bar) {
+              const title = bar.querySelector('.bar-title');
+              const match = title.textContent.match(/\((\d+)\)$/);
+              if (match) {
+                const count = parseInt(match[1]) + 1;
+                title.textContent = title.textContent.replace(/\(\d+\)$/, `(${count})`);
+              }
+            }
+            saveTopics();
+            input.value = '';
+          });
+          container.appendChild(addQuoteForm);
 
           // Add new sticker
           const sticker = document.createElement('div');
@@ -632,35 +699,15 @@
           sticker.textContent = newQuote;
           sticker.style.setProperty('--rotation', `${(Math.random() * 10 - 5)}deg`);
           container.appendChild(sticker);
-          makeDraggable(sticker, trashBin);
-
-          // Layout stickers again
-          layoutStickers(container);
-
-          // Update topic title count
-          const bar = container.closest('.bar');
-          if (bar) {
-            const title = bar.querySelector('.bar-title');
-            const match = title.textContent.match(/\((\d+)\)$/);
-            if (match) {
-              const count = parseInt(match[1]) + 1;
-              title.textContent = title.textContent.replace(/\(\d+\)$/, `(${count})`);
-            }
-          }
-          // Save to localStorage
-          saveTopics();
-
-          addQuoteInput.value = '';
-        });
-      }
+        }
 
     function makeDraggable(el, trashBin) {
-  if (!el) return;
+      if (!el) return;
 
-  let isDragging = false;
-  let shiftX, shiftY;
-  let isOverTrash = false;
-  let touchStarted = false;
+      let isDragging = false;
+      let shiftX, shiftY;
+      let isOverTrash = false;
+      let touchStarted = false;
 
   function onStart(e) {
     if (e.target.classList.contains('close-btn')) return;
