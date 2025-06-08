@@ -564,43 +564,95 @@
       clearForm();
     }
 
-    function createStickers(container, stickers) {
-      // Add close button
-      const closeBtn = document.createElement('div');
-      closeBtn.className = 'close-btn';
-      closeBtn.textContent = '×';
-      closeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const bar = container.closest('.bar');
-        if (bar) {
-          bar.classList.remove('expanded');
-          bar.dataset.expanded = 'false';
-          container.innerHTML = '';
-        }
-      });
-      container.appendChild(closeBtn);
-
-      // Create trash bin
-      const trashBin = document.createElement('div');
-      trashBin.className = 'trash-bin';
-      container.appendChild(trashBin);
-
-      // Create stickers
-      stickers.forEach((quote, i) => {
-        const sticker = document.createElement('div');
-        sticker.className = 'sticker';
-        sticker.textContent = quote;
-        sticker.style.setProperty('--rotation', `${(Math.random() * 10 - 5)}deg`);
-        container.appendChild(sticker);
-        
-        // Make draggable and add trash bin functionality
-        requestAnimationFrame(() => {
-          if (document.body.contains(sticker)) {
-            makeDraggable(sticker, trashBin);
+      function createStickers(container, stickers, bar = null) {
+        // Add close button
+        const closeBtn = document.createElement('div');
+        closeBtn.className = 'close-btn';
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bar = container.closest('.bar');
+          if (bar) {
+            bar.classList.remove('expanded');
+            bar.dataset.expanded = 'false';
+            container.innerHTML = '';
           }
         });
-      });
-    }
+        container.appendChild(closeBtn);
+
+        // Create trash bin
+        const trashBin = document.createElement('div');
+        trashBin.className = 'trash-bin';
+        container.appendChild(trashBin);
+
+        // Create stickers
+        stickers.forEach((quote, i) => {
+          const sticker = document.createElement('div');
+          sticker.className = 'sticker';
+          sticker.textContent = quote;
+          sticker.style.setProperty('--rotation', `${(Math.random() * 10 - 5)}deg`);
+          container.appendChild(sticker);
+
+          // Make draggable and add trash bin functionality
+          requestAnimationFrame(() => {
+            if (document.body.contains(sticker)) {
+              makeDraggable(sticker, trashBin);
+            }
+          });
+        });
+
+        // --- Add New Quote UI ---
+        const addQuoteDiv = document.createElement('div');
+        addQuoteDiv.style.marginTop = "20px";
+        addQuoteDiv.style.display = "flex";
+        addQuoteDiv.style.alignItems = "center";
+        addQuoteDiv.style.gap = "10px";
+
+        const addQuoteInput = document.createElement('input');
+        addQuoteInput.type = "text";
+        addQuoteInput.placeholder = translations[currentLanguage].addQuoteBtn;
+        addQuoteInput.style.flex = "1";
+
+        const addQuoteBtn = document.createElement('button');
+        addQuoteBtn.textContent = translations[currentLanguage].addQuoteBtn;
+        addQuoteBtn.style.flex = "0";
+
+        addQuoteDiv.appendChild(addQuoteInput);
+        addQuoteDiv.appendChild(addQuoteBtn);
+
+        container.appendChild(addQuoteDiv);
+
+        addQuoteBtn.addEventListener('click', function () {
+          const newQuote = addQuoteInput.value.trim();
+          if (!newQuote) return;
+
+          // Add new sticker
+          const sticker = document.createElement('div');
+          sticker.className = 'sticker';
+          sticker.textContent = newQuote;
+          sticker.style.setProperty('--rotation', `${(Math.random() * 10 - 5)}deg`);
+          container.appendChild(sticker);
+          makeDraggable(sticker, trashBin);
+
+          // Layout stickers again
+          layoutStickers(container);
+
+          // Update topic title count
+          const bar = container.closest('.bar');
+          if (bar) {
+            const title = bar.querySelector('.bar-title');
+            const match = title.textContent.match(/\((\d+)\)$/);
+            if (match) {
+              const count = parseInt(match[1]) + 1;
+              title.textContent = title.textContent.replace(/\(\d+\)$/, `(${count})`);
+            }
+          }
+          // Save to localStorage
+          saveTopics();
+
+          addQuoteInput.value = '';
+        });
+      }
 
     function makeDraggable(el, trashBin) {
   if (!el) return;
