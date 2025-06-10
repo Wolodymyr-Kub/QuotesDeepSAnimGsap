@@ -9,10 +9,14 @@
       box-sizing: border-box;
     }
     body {
-      margin: 0;
-      font-family: sans-serif;
-      background: #fff8d2;
-    }
+    margin: 0;
+    font-family: sans-serif;
+    background-image: url('https://images.pexels.com/photos/1420440/pexels-photo-1420440.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+}
 
     .language-selector {
       position: fixed;
@@ -128,8 +132,8 @@
       position: fixed;
       bottom: 20px;
       right: 20px;
-      width: 60px;
-      height: 60px;
+      width: 80px;
+      height: 80px;
       background: #ff4444;
       border-radius: 50%;
       display: flex;
@@ -240,7 +244,7 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 10px;
+      gap: 20px;
     }
 .add-quote-to-topic-form label {
   font-weight: bold;
@@ -251,7 +255,7 @@
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 1.5rem;
   margin-bottom: 10px;
 }
 .add-quote-to-topic-form button {
@@ -272,7 +276,7 @@
       .sticker {
         min-width: 180px;
         max-width: 250px;
-        font-size: 10px;
+        font-size: 20px;
       }
       .input-form, .search-container {
         margin: 10px;
@@ -292,7 +296,7 @@
     @media (max-width: 480px) {
       .sticker {
         min-width: 60px;
-        max-width: 350px;
+        max-width: 345px;
         font-size: 20px;
       }
       .language-selector {
@@ -301,7 +305,7 @@
       }
       .language-selector select {
         padding: 3px;
-        font-size: 12px;
+        font-size: 20px;
       }
     }
   </style>
